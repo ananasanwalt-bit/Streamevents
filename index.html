@@ -1,0 +1,28 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StreamEvents</title><style>
+:root{--bg:#07080d;--p:#10131b;--p2:#171b26;--b:#292f40;--t:#f6f7fb;--m:#9199ad;--a:#8b5cf6;--g:#22c55e;--r:#ef4444}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0,#21113b,transparent 35%),var(--bg);color:var(--t);font:14px system-ui}.wrap{max-width:1180px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:center}.logo{font-size:22px;font-weight:800}.pill{padding:7px 10px;border:1px solid var(--b);border-radius:99px;color:var(--m)}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:20px}.card{background:#10131bdd;border:1px solid var(--b);border-radius:16px;padding:18px}.s4{grid-column:span 4}.s8{grid-column:span 8}.s12{grid-column:span 12}h1{font-size:30px;margin:28px 0 5px}h2{font-size:16px}.muted{color:var(--m)}button,input,select{font:inherit}button{border:0;border-radius:10px;padding:10px 14px;background:var(--p2);color:#fff;cursor:pointer;border:1px solid var(--b)}button.primary{background:linear-gradient(135deg,#7c3aed,#db2777);border:0}.form{display:grid;gap:10px}.form input,.form select{width:100%;padding:11px;background:#090b10;border:1px solid var(--b);border-radius:9px;color:#fff}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.rule{padding:10px;background:#151923;border-radius:10px;margin:8px 0}.hidden{display:none}.event{padding:10px;background:#151923;border-radius:10px;margin:8px 0}.green{color:#86efac}@media(max-width:800px){.s4,.s8{grid-column:span 12}.wrap{padding:16px}}
+</style></head><body><div class="wrap">
+<div class="top"><div class="logo">⚡ StreamEvents</div><div id="account" class="pill">Nicht eingeloggt</div></div>
+<h1>Dein LIVE → Game Dashboard</h1><div class="muted">TikTok Events in Spielaktionen verwandeln.</div>
+<div id="auth" class="grid"><div class="card s4"><h2>Login</h2><div class="form"><input id="lemail" placeholder="E-Mail"><input id="lpass" type="password" placeholder="Passwort"><button class="primary" onclick="login()">Einloggen</button><button onclick="register()">Konto erstellen</button></div><p id="msg" class="muted"></p></div></div>
+<div id="app" class="hidden"><div class="grid">
+<div class="card s4"><h2>TikTok</h2><div id="tt" class="muted">Nicht verbunden</div><button class="primary" style="margin-top:12px" onclick="connectTikTok()">Mit TikTok verbinden</button><button style="margin-left:6px" onclick="logout()">Logout</button></div>
+<div class="card s4"><h2>Game Bridge</h2><div class="green">● WebSocket bereit</div><button style="margin-top:12px" onclick="openGame()">Browser-Spiel öffnen</button></div>
+<div class="card s4"><h2>Regeln</h2><div id="count">0</div><button style="margin-top:12px" onclick="addRule()">Regel hinzufügen</button></div>
+<div class="card s8"><h2>Event-Regeln</h2><div id="rules"></div></div>
+<div class="card s4"><h2>Test</h2><button onclick="test('FOLLOW','1','SPAWN_ENEMY')">➕ Follow</button><button onclick="test('LIKE','100','EXPLOSION')">❤️ 100 Likes</button><button onclick="test('GIFT','Rose','SPAWN_ENEMY')">🎁 Rose</button><button onclick="test('GIFT','Galaxy','BOSS_SPAWN')">🌌 Galaxy</button></div>
+<div class="card s12"><h2>Live Feed</h2><div id="feed" class="muted">Noch keine Events.</div></div>
+</div></div></div>
+<script>
+async function api(u,o){const r=await fetch(u,{headers:{'Content-Type':'application/json'},...o});const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Fehler');return j}
+async function login(){try{await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:lemail.value,password:lpass.value})});load()}catch(e){msg.textContent=e.message}}
+async function register(){try{await api('/api/auth/register',{method:'POST',body:JSON.stringify({email:lemail.value,password:lpass.value})});load()}catch(e){msg.textContent=e.message}}
+async function load(){const m=await api('/api/me');auth.classList.add('hidden');app.classList.remove('hidden');account.textContent=m.user.email;tt.innerHTML=m.tiktok?`Verbunden: <b>${m.tiktok.display_name||'TikTok'}</b>`:'Nicht verbunden';renderRules(await api('/api/rules'))}
+async function logout(){await api('/api/auth/logout',{method:'POST'});location.reload()}
+function connectTikTok(){location.href='/auth/tiktok'}
+function openGame(){window.open('/game','_blank')}
+async function renderRules(rs){count.textContent=rs.length;rules.innerHTML=rs.map(r=>`<div class="rule"><div class="row"><b>${r.event_type}</b><span>${r.value} → ${r.action}</span><button onclick="delRule(${r.id})">Löschen</button></div></div>`).join('')||'<div class="muted">Noch keine Regeln.</div>'}
+async function addRule(){const type=prompt('Event: FOLLOW, LIKE oder GIFT','FOLLOW');if(!type)return;const value=prompt('Wert, z.B. 100 oder Galaxy','1');const action=prompt('Game-Aktion, z.B. SPAWN_ENEMY','SPAWN_ENEMY');if(!action)return;await api('/api/rules',{method:'POST',body:JSON.stringify({event_type:type,value:value||'1',action})});renderRules(await api('/api/rules'))}
+async function delRule(id){await api('/api/rules/'+id,{method:'DELETE'});renderRules(await api('/api/rules'))}
+function test(type,value,action){feed.innerHTML=`<div class="event"><b>${type}</b> ${value} → <span class="green">${action}</span></div>`+feed.innerHTML;fetch('/api/webhooks/tiktok',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:type,content:JSON.stringify({value,action}),event_id:'demo-'+Date.now()})})}
+(async()=>{try{await load()}catch{}})();
+</script></body></html>
