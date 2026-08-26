@@ -1,7 +1,18 @@
-FROM node:22-alpine
+# StreamEvents production container
+FROM node:20-alpine
+
 WORKDIR /app
+
+# Install production dependencies
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
+
+# Copy application
 COPY . .
-EXPOSE 3000
-CMD ["npm","start"]
+
+ENV NODE_ENV=production
+ENV PORT=10000
+
+EXPOSE 10000
+
+CMD ["npm", "start"]
