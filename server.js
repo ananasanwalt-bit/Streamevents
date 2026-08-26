@@ -1,5 +1,15 @@
-import express from 'express'; import http from 'http'; import {WebSocketServer} from 'ws';
-const app=express(), server=http.createServer(app), port=process.env.PORT||10000;
-app.use(express.json()); app.use(express.static('public')); app.get('/health',(q,s)=>s.json({ok:true})); app.get('/api/game-token',(q,s)=>s.json({token:'demo'}));
-const wss=new WebSocketServer({server,path:'/ws/game'}); wss.on('connection',ws=>ws.send(JSON.stringify({type:'connected'})));
-server.listen(port,()=>console.log('StreamEvents on '+port));
+const express = require("express");
+const path = require("path");
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+app.use(express.static(__dirname));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server läuft auf Port ${PORT}`);
+});
