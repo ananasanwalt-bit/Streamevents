@@ -1,9 +1,27 @@
-import pg from "pg";
-import fs from "node:fs";
-const {Pool}=pg;
-export const pool=new Pool({connectionString:process.env.DATABASE_URL});
-export async function initDb(){
-  const sql=fs.readFileSync(new URL("../schema.sql",import.meta.url),"utf8");
+const { Pool } = require("pg");
+const fs = require("fs");
+const path = require("path");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+async function initDb() {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "schema.sql"),
+    "utf8"
+  );
+
   await pool.query(sql);
+  console.log("Datenbank erfolgreich initialisiert.");
 }
-export async function q(text,params=[]){return pool.query(text,params)}
+
+async function q(text, params = []) {
+  return pool.query(text, params);
+}
+
+module.exports = {
+  pool,
+  initDb,
+  q
+};
